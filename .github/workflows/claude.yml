@@ -1,0 +1,32 @@
+name: Claude Code — autonomous prototype build
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  id-token: write
+
+jobs:
+  implement:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            A ticket has been filed as this GitHub issue. Implement it to build a
+            working prototype, following the tech stack and conventions in CLAUDE.md.
+            Keep changes minimal and runnable. When you are done, open a pull request
+            whose body contains "Closes #${{ github.event.issue.number }}".
+          # bypassPermissions: the action runs unattended on issues.opened — there is
+          # no human to approve tool calls, so the default agent policy denies every
+          # file write and git command and Claude burns its turns without committing
+          # anything. Repos are private, throwaway prototypes, so full autonomy is safe.
+          # Sonnet 4.6 for prototype builds: ~40% cheaper per token than Opus and
+          # plenty for a working end-to-end slice. Bump to opus for harder builds.
+          claude_args: "--permission-mode bypassPermissions --model claude-sonnet-4-6 --max-turns 30"
