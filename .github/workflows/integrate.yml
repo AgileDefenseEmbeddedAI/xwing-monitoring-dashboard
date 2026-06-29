@@ -1,0 +1,56 @@
+name: Claude Code — integrate PRs in order
+
+on:
+  workflow_run:
+    workflows: ["Claude Code — autonomous prototype build"]
+    types: [completed]
+  workflow_dispatch:
+
+concurrency:
+  group: pr-integration
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  id-token: write
+
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            You are the integration agent for this auto-generated prototype repo. Each
+            ticket was filed as a GitHub issue and built into its own pull request; the
+            PRs must now be merged into the default branch in the correct dependency
+            order. The issues were seeded in build order, so a PR that "Closes #N" with a
+            lower N must merge before one with a higher N.
+
+            Do this, and nothing else:
+            1. List the OPEN pull requests (prefer those labeled "prototype"). For each,
+               read its body to find which issue it closes ("Closes #N"); N is its order.
+               Ignore draft PRs and PRs that close no issue.
+            2. Sort the PRs by N ascending, then merge them one at a time in that order:
+               a. Bring the PR up to date with the latest default branch (rebase or merge
+                  main in). Resolve any conflicts intelligently, preserving the intent of
+                  BOTH the already-merged work and this PR — never blindly take one side.
+               b. Verify the project still builds/runs per the README "Running" section
+                  (install deps and run the start/smoke command if it is cheap). If your
+                  integration broke it, fix it minimally before merging.
+               c. Squash-merge the PR into the default branch and delete its branch.
+            3. If the PR for an earlier issue number is NOT open yet (a gap in the
+               sequence), STOP — do not merge later PRs ahead of a missing dependency.
+               A later run will pick up where you left off once that PR appears.
+            4. If a PR cannot be made to build or merge after a reasonable effort, leave
+               it open, post a comment explaining exactly what is blocking it, and stop.
+
+            Be strictly idempotent: act only on still-open PRs, and if there are none, do
+            nothing. Use the gh CLI and git for all operations.
+          claude_args: "--permission-mode bypassPermissions --model claude-sonnet-4-6 --max-turns 40"
