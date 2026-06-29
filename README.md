@@ -10,4 +10,23 @@ AI-powered real-time monitoring dashboard for X-wing fleet status, performance m
 
 ## Running
 
-_To be filled in by the first implemented ticket._
+```bash
+npm run install:all
+npm run dev
+```
+
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:3001
+
+### What it does
+
+- **Fleet Dashboard** (`/`) — live table of all 30 X-wing fighters, refreshed every 2 seconds, showing pilot, squadron, status badge, and current metric values. Click any row to drill into that aircraft.
+- **Aircraft Detail** (`/aircraft/:id`) — 2×2 recharts line charts for shield, fuel, weapons, and hyperdrive; anomaly dots highlighted in red; maintenance prediction cards; unified alert timeline; and a "Download History" button that saves the raw JSON telemetry.
+
+### Architecture
+
+| Layer | Tech | Port |
+|-------|------|------|
+| Frontend | React 18 + Vite + recharts | 3000 |
+| Backend | Node.js + Express | 3001 |
+| Telemetry | In-process simulator (1 s tick, 30 aircraft) | — |
